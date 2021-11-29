@@ -16,3 +16,9 @@ makedocs(;
         "Home" => "index.md",
     ],
 )
+
+deploydecs(;
+    devbranch="main",
+    repo="github.com/JuliaHCI/LuckyImaging.jl",
+    push_preview=true
+)
