@@ -1,7 +1,7 @@
 module LuckyImaging
 
 using Compat
-using Pkg.Artifacts
+using LazyArtifacts
 using Statistics
 using SubpixelRegistration
 
