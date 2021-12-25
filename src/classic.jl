@@ -10,7 +10,7 @@ The following metrics, set with the keyword argument `metric` are available
 
 * `:peak` - the maximum value
 * `:mean` - the mean value
-* other - pass a function with the signature`f(::AbstractMatrix)` which returns a single value
+* other - pass a function with the signature `f(::AbstractMatrix)` which returns a single value
 
 # Registration
 
