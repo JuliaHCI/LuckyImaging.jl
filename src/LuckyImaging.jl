@@ -4,7 +4,7 @@ using Compat
 using Statistics
 using SubpixelRegistration
 
-export lucky_image, classic_lucky_image, classic_lucky_image!
+export lucky_image, classic_lucky_image, classic_lucky_image!, fourier_lucky_image, fourier_lucky_image!
 
 include("util.jl")
 include("classic.jl")

@@ -41,15 +41,15 @@ julia> res = fourier_lucky_image(cube; dims=3, q=0.5, upsample_factor=10);
 
 [`fourier_lucky_image!`](@ref)
 """
-function fourier_lucky_image(cube::AbstractArray{T,3}; kwargs...) where T
+function fourier_lucky_image(cube::AbstractArray{T,3}; dims, kwargs...) where T
     pixshape = nottuple(size(cube), dims)
     storage = similar(cube, pixshape)
-    return fourier_lucky_image!(storage, cube; kwargs...)
+    return fourier_lucky_image!(storage, cube; dims, kwargs...)
 
 end
 
 
-function fourier_lucky_image!(storage::AbstractMatric, cube::AbstractArray{T,3}; dims, q, register=:dft, maxfreq=1, kwargs...)
+function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3}; dims, q, register=:dft, kwargs...) where T
     # register cube
     if register === :dft
         # to help coregistration, choose refidx from frame with highest flux
@@ -75,10 +75,12 @@ function fourier_lucky_image!(storage::AbstractMatric, cube::AbstractArray{T,3};
     # plan fft using first slice
     first_frame = selectdim(registered, dims, firstindex(registered, dims))
     plan = plan_fft(first_frame)
-    mean_freq = zeros(Complex(T), size(storage))
+    # set up work arrays to avoid allocating inside loop
+    mean_freq = zeros(Complex{T}, size(storage))
     tmp_mod = similar(storage)
     norm_value = size(cube, dims)
-    for didx in axes(registered, dims)
+
+    @inbounds for didx in axes(registered, dims)
         frame = selectdim(registered, dims, didx)
         frame_freq = plan * frame
         # if we are doing DFT registration we can just do that during this step to
@@ -88,12 +90,12 @@ function fourier_lucky_image!(storage::AbstractMatric, cube::AbstractArray{T,3};
             fourier_shift!(frame_freq, result.shift, result.phasediff)
         end
         
-        # low-pass filter
-        # we can accomplish this by multiplying against a circular aperture
-        ctr = center(frame)
-        r = 0.5 * maxfreq * minimum(size(frame))
-        circ = CircularAperture(ctr[2], ctr[1], r)[axes(frame_freq)...]
-        frame_freq .*= ifftshift(circ)
+        # # low-pass filter
+        # # we can accomplish this by multiplying against a circular aperture
+        # ctr = center(frame)
+        # r = 0.5 * maxfreq * minimum(size(frame))
+        # circ = CircularAperture(reverse(ctr)..., r)[axes(frame_freq)...]
+        # frame_freq .*= ifftshift(circ)
 
         # get selection cutoff from remaining frequencies
         @. tmp_mod = abs(frame_freq)
