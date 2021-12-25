@@ -77,7 +77,7 @@ function classic_lucky_image!(
 
     # make sure array is zerod out
     fill!(storage, zero(T))
-    norm_value = size(cube, dims)
+    norm_value = count(>(cutoff), _metric)
     # now, time to go through cube with frames above the cutoff
     # and combine them into the final frame. 
     @inbounds for didx in axes(_cube, dims)
