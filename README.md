@@ -1,4 +1,4 @@
-# LuckyImaging
+# LuckyImaging.jl
 
 [![Build Status](https://github.com/JuliaHCI/LuckyImaging.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaHCI/LuckyImaging.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/L/LuckyImaging.svg)](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html)
@@ -7,7 +7,6 @@
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliahci.github.io/LuckyImaging.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahci.github.io/LuckyImaging.jl/dev)
-
 
 ## Installation
 
@@ -24,7 +23,6 @@ To import the library
 ```julia
 using LuckyImaging
 ```
-
 
 ## Contributing and Support
 

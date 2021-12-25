@@ -14,11 +14,11 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "API/Reference" => "adi.md"
     ],
 )
 
 deploydecs(;
     devbranch="main",
     repo="github.com/JuliaHCI/LuckyImaging.jl",
-    push_preview=true
 )

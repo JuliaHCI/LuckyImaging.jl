@@ -26,11 +26,6 @@ To import the library
 using LuckyImaging
 ```
 
-## API/Reference
+## Contributing and Support
 
-```@index
-```
-
-```@autodocs
-Modules = [LuckyImaging]
-```
+If you would like to contribute, feel free to open a [pull request](https://github.com/juliahci/LuckyImaging.jl/pulls). If you want to discuss something before contributing, head over to [discussions](https://github.com/juliahci/LuckyImaging.jl/discussions) and join or open a new topic. If you're having problems with something, please open an [issue](https://github.com/juliahci/LuckyImaging.jl/issues).
