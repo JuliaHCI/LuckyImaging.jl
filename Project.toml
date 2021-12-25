@@ -6,8 +6,17 @@ version = "0.1.0"
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+ImageFiltering = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
+Photometry = "af68cb61-81ac-52ed-8703-edc140936be4"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+SubpixelRegistration = "97a7e826-69e2-510e-8af8-254736c4b599"
 
 [compat]
-julia = "1.5"
 AbstractFFTs = "1"
 FFTW = "1.4"
+ImageFiltering = "0.6"
+LoopVectorization = "0.12"
+Photometry = "0.7"
+SubpixelRegistration = "0.2"
+julia = "1.6"
