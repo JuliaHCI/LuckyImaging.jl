@@ -18,7 +18,7 @@ makedocs(;
     ],
 )
 
-deploydecs(;
+deploydocs(;
     devbranch="main",
     repo="github.com/JuliaHCI/LuckyImaging.jl",
 )
