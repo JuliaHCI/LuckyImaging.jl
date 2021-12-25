@@ -417,9 +417,9 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.SubpixelRegistration]]
 deps = ["AbstractFFTs", "Compat", "FFTW", "Statistics"]
-path = "../../SubpixelRegistration"
+git-tree-sha1 = "c0736caa41e8a06be7c49d6ef2cc393ec05114c0"
 uuid = "97a7e826-69e2-510e-8af8-254736c4b599"
-version = "0.2.0"
+version = "0.2.1"
 
 [[deps.TOML]]
 deps = ["Dates"]
