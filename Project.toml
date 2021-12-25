@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 ImageFiltering = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
@@ -14,6 +15,7 @@ SubpixelRegistration = "97a7e826-69e2-510e-8af8-254736c4b599"
 
 [compat]
 AbstractFFTs = "1"
+Compat = "3.31.1"
 FFTW = "1.4"
 ImageFiltering = "0.6"
 LoopVectorization = "0.12"

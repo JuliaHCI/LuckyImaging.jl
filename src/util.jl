@@ -1,10 +1,28 @@
 using LoopVectorization
 using Base: tail
 
+
+nottuple(t, d) = sorted_setdiff(t, (t[d],))
+replace(t::Tuple, d, val) = ntuple(i -> ifelse(i === d, val, t[i]), length(t))
+
+@inline center(X) = map(ax -> (first(ax) + last(ax)) / 2, axes(X))
+@inline center(X, d) = axes(X, d) |> ax -> (first(ax) + last(ax)) / 2
+
+function window_view(cube, dims, window_size)
+    ctr = center(cube)
+    half_length = window_size ./ 2
+    starts = @. floor(Int, ctr - half_length)
+    ends = @. ceil(Int, ctr + half_length)
+    ranges = range.(starts, ends)
+    # reindex
+    _ranges = replace(ranges, dims, firstindex(cube, dims):lastindex(cube, dims))
+    return view(cube, _ranges...)
+end
+
 function center_of_mass(image::AbstractMatrix{T}; min_value=T(1e3)) where T
     outx = outy = zero(typeof(one(T) / one(T)))
     norm = zero(T)
-    @turbo for idx in CartesianIndices(image)
+    @inbounds for idx in CartesianIndices(image)
         w = image[idx]
         w < min_value && continue
         norm += w
