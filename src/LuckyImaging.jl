@@ -1,10 +1,16 @@
 module LuckyImaging
 
 using Compat
+using Pkg.Artifacts
 using Statistics
 using SubpixelRegistration
 
-export lucky_image, classic_lucky_image, classic_lucky_image!, fourier_lucky_image, fourier_lucky_image!
+export lucky_image,
+       classic_lucky_image,
+       classic_lucky_image!,
+       fourier_lucky_image,
+       fourier_lucky_image!,
+       testcube
 
 include("util.jl")
 include("classic.jl")
@@ -37,5 +43,22 @@ function lucky_image(cube::AbstractArray{T,3}; alg=:fourier, kwargs...) where T
         throw(ArgumentError("$alg not recognized as a lucky imaging algorithm. Choose from (:fourier, :classic)"))
     end
 end
+
+"""
+    testcube()
+
+Return the filepath of the test cube artifact. This needs to be loaded, using [FITSIO.jl](https://github.com/JuliaAstro/FITSIO.jl), for example. This data is a sequence of frames captured on the VAMPIRES instrument on Subaru/SCExAO.[^2]
+
+[^2]: [VAMPIRES](https://www.naoj.org/Projects/SCEXAO/scexaoWEB/030openuse.web/040vampires.web/indexm.html)
+
+# Examples
+
+```julia
+julia> using FITSIO
+
+julia> cube = read(FITS(testcube())[1])
+```
+"""
+testcube() = joinpath(artifact"test_cube", "test_cube.fits")
 
 end
