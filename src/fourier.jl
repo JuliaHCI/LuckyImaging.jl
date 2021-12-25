@@ -1,4 +1,107 @@
+using AbstractFFTs
+using FFTW
+using Photometry: CircularAperture
+using SubpixelRegistration: fourier_shift!
 
-function fourier_lucky_image()
+"""
+    fourier_lucky_image(cube; dims, q, register=:dft, kwargs...)
 
+Perform Fourier lucky imaging following the algorithm in Garrel, Guyon, and Baudoz (2012).[^1] This technique provides superior sharpness compared to classic lucky imaging *for the same selection percentage*. This means for a desired angular resolution (or Strehl ratio) a higher signal-to-noise ratio can be achieved.
+
+[^1]: Vincent Garrel et al 2012 ["A Highly Efficient Lucky Imaging Algorithm: Image Synthesis Based on Fourier Amplitude Selection"](https://iopscience.iop.org/article/10.1086/667399) PASP 124 861
+
+# Registration
+
+Before processing the Fourier transform of the cube, the frames need coregistered. The following algorithms are available for registering the cube, set with the `register` keyword argument. Extra options can be provided to `kwargs...`
+
+* `:dft` - use `SubpixelRegistration.jl` to register the frames using their phase offsets. The reference frame will be the one with the highest metric, and keyword arguments like `upsample_factor` and `refidx` can be passed directly.
+* `:peak` - register to maximum value
+* `:com` - register to center of mass
+
+!!! warning "DFT registration"
+    The `:dft` registration option only *co-registers* frames, in other words, it aligns the cube to *itself*, not to the center of the frame. To avoid strong phase ramps in the Fourier transform used in the selection process, we need to center the entire cube. Either choose a `refidx` from the input cube that is well-centered already, or shift the entire cube such that the first frame is centered. By default, the `refidx` will be chosen by the frame with the highest peak flux.
+
+# Keyword arguments
+
+* `dims` - the dimension along which to perform lucky imaging (required)
+* `q` - the selection quantile (required)
+* `register` - the method used for registration. Default is `:dft`
+* `maxfreq` - if provided, will exclude frequencies higher than `maxfreq * maximum(fftfreqs)`. In other words, a value of 1 uses the full Fourier transform, but a value of 0.5 will low-pass filter
+* `kwargs...` - additional keyword arguments will be passed to the `register` method (e.g., `upsample_factor`)
+
+# Examples
+
+```julia
+julia> cube = # load data ...
+
+julia> res = fourier_lucky_image(cube; dims=3, q=0.5, upsample_factor=10);
+```
+
+# See also
+
+[`fourier_lucky_image!`](@ref)
+"""
+function fourier_lucky_image(cube::AbstractArray{T,3}; kwargs...) where T
+    pixshape = nottuple(size(cube), dims)
+    storage = similar(cube, pixshape)
+    return fourier_lucky_image!(storage, cube; kwargs...)
+
+end
+
+
+function fourier_lucky_image!(storage::AbstractMatric, cube::AbstractArray{T,3}; dims, q, register=:dft, maxfreq=1, kwargs...)
+    # register cube
+    if register === :dft
+        # to help coregistration, choose refidx from frame with highest flux
+        refidx = @compat findmax(maximum, eachslice(cube; dims))[2]
+        reffreq = fft(selectdim(cube, dims, refidx))
+        # don't actually register yet, do this during loop
+        registered = cube
+    else
+        registered = copy(cube)
+        @inbounds for didx in axes(registered, dims)
+            frame = selectdim(registered, dims, didx)
+            if register === :peak
+                index = argmax(frame).I
+            elseif register === :com
+                index = center_of_mass(frame)
+            end
+            shift = center(frame) .- index
+            # update frame in-place (it is a view)
+            frame .= fourier_shift(frame, shift)
+        end
+    end
+
+    # plan fft using first slice
+    first_frame = selectdim(registered, dims, firstindex(registered, dims))
+    plan = plan_fft(first_frame)
+    mean_freq = zeros(Complex(T), size(storage))
+    tmp_mod = similar(storage)
+    norm_value = size(cube, dims)
+    for didx in axes(registered, dims)
+        frame = selectdim(registered, dims, didx)
+        frame_freq = plan * frame
+        # if we are doing DFT registration we can just do that during this step to
+        # save of time spent doing FFTs
+        if register === :dft
+            result = phase_offset(plan, reffreq, frame_freq; kwargs...)
+            fourier_shift!(frame_freq, result.shift, result.phasediff)
+        end
+        
+        # low-pass filter
+        # we can accomplish this by multiplying against a circular aperture
+        ctr = center(frame)
+        r = 0.5 * maxfreq * minimum(size(frame))
+        circ = CircularAperture(ctr[2], ctr[1], r)[axes(frame_freq)...]
+        frame_freq .*= ifftshift(circ)
+
+        # get selection cutoff from remaining frequencies
+        @. tmp_mod = abs(frame_freq)
+        cutoff = quantile(vec(tmp_mod), q)
+        # update running mean of frequencies
+        @. mean_freq[tmp_mod ≥ cutoff] += frame_freq[tmp_mod ≥ cutoff] / norm_value
+    end
+    # ifft
+    storage .= real.(plan \ mean_freq)
+    return storage
 end
