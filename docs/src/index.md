@@ -2,7 +2,7 @@
 CurrentModule = LuckyImaging
 ```
 
-# LuckyImaging
+# LuckyImaging.jl
 
 [![Code](https://img.shields.io/badge/Code-GitHub-black.svg)](https://github.com/JuliaHCI/LuckyImaging.jl)
 [![Build Status](https://github.com/JuliaHCI/LuckyImaging.jl/workflows/CI/badge.svg?branch=main)](https://github.com/JuliaHCI/LuckyImaging.jl/actions)
