@@ -49,7 +49,7 @@ end
 """
     classic_lucky_image!(out::AbstractMatrix, cube; dims, q, kwargs...)
 
-Perform classic lucky imaging and store the combined frame in `out`. See [`classic_lucky_image`](@ref) for keyword options.
+Perform classic lucky imaging and store the combined frame in `out`. See [`classic_lucky_image`](@ref) for a full description.
 """
 function classic_lucky_image!(
     storage::AbstractMatrix, cube::AbstractArray{T,3}; 

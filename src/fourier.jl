@@ -48,7 +48,11 @@ function fourier_lucky_image(cube::AbstractArray{T,3}; dims, kwargs...) where T
 
 end
 
+"""
+    fourier_lucky_image!(out::AbstractMatrix, cube; dims, q, kwargs...)
 
+Perform Fourier lucky imaging and store the combined frame in `out`. See [`fourier_lucky_image`](@ref) for a full descripton.
+"""
 function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3}; dims, q, register=:dft, kwargs...) where T
     # register cube
     if register === :dft
