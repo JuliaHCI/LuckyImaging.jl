@@ -1,6 +1,5 @@
 using AbstractFFTs
 using FFTW
-using Photometry: CircularAperture
 using SubpixelRegistration: fourier_shift!
 
 """
