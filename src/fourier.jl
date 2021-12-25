@@ -1,5 +1,6 @@
 using AbstractFFTs
 using FFTW
+using LinearAlgebra
 using SubpixelRegistration: fourier_shift!
 
 """
@@ -11,14 +12,11 @@ Perform Fourier lucky imaging following the algorithm in Garrel, Guyon, and Baud
 
 # Registration
 
-Before processing the Fourier transform of the cube, the frames need coregistered. The following algorithms are available for registering the cube, set with the `register` keyword argument. Extra options can be provided to `kwargs...`
+Before processing the Fourier transform of the cube, the frames need coregistered to avoid phase ramps in the Fourier transform modulus. The following algorithms are available for registering the cube, set with the `register` keyword argument. Extra options can be provided to `kwargs...`
 
-* `:dft` - use `SubpixelRegistration.jl` to register the frames using their phase offsets. The reference frame will be the one with the highest metric, and keyword arguments like `upsample_factor` and `refidx` can be passed directly.
+* `:dft` - use `SubpixelRegistration.jl` to register the frames using their phase offsets. The reference frame will be the one with the highest metric, and keyword arguments like `upsample_factor` and `refidx` can be passed directly. By default the `refidx` will be set to the frame with the highest peak flux.
 * `:peak` - register to maximum value
 * `:com` - register to center of mass
-
-!!! warning "DFT registration"
-    The `:dft` registration option only *co-registers* frames, in other words, it aligns the cube to *itself*, not to the center of the frame. To avoid strong phase ramps in the Fourier transform used in the selection process, we need to center the entire cube. Either choose a `refidx` from the input cube that is well-centered already, or shift the entire cube such that the first frame is centered. By default, the `refidx` will be chosen by the frame with the highest peak flux.
 
 # Keyword arguments
 
@@ -44,7 +42,6 @@ function fourier_lucky_image(cube::AbstractArray{T,3}; dims, kwargs...) where T
     pixshape = nottuple(size(cube), dims)
     storage = similar(cube, pixshape)
     return fourier_lucky_image!(storage, cube; dims, kwargs...)
-
 end
 
 """
@@ -52,7 +49,7 @@ end
 
 Perform Fourier lucky imaging and store the combined frame in `out`. See [`fourier_lucky_image`](@ref) for a full descripton.
 """
-function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3}; dims, q, register=:dft, kwargs...) where T
+function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3}; dims, q, register=:dft, maxfreq=1, kwargs...) where T
     # register cube
     if register === :dft
         # to help coregistration, choose refidx from frame with highest flux
@@ -82,6 +79,11 @@ function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3};
     mean_freq = zeros(Complex{T}, size(storage))
     tmp_mod = similar(storage)
     norm_value = size(cube, dims)
+    # figure out frequency mask ahead of time
+
+    freqs = fftfreq.(size(mean_freq))
+    _maxfreq = norm(maxfreq .* maximum.(freqs))
+    mask = hypot.(freqs[1], freqs[2]')  .> _maxfreq
 
     @inbounds for didx in axes(registered, dims)
         frame = selectdim(registered, dims, didx)
@@ -93,12 +95,8 @@ function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3};
             fourier_shift!(frame_freq, result.shift, result.phasediff)
         end
         
-        # # low-pass filter
-        # # we can accomplish this by multiplying against a circular aperture
-        # ctr = center(frame)
-        # r = 0.5 * maxfreq * minimum(size(frame))
-        # circ = CircularAperture(reverse(ctr)..., r)[axes(frame_freq)...]
-        # frame_freq .*= ifftshift(circ)
+        # low-pass filter
+        frame_freq[mask] .= zero(eltype(frame_freq))
 
         # get selection cutoff from remaining frequencies
         @. tmp_mod = abs(frame_freq)
