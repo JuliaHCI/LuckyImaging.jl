@@ -33,28 +33,18 @@ julia> cube = # load data ...
 
 julia> res = fourier_lucky_image(cube; dims=3, q=0.5, upsample_factor=10);
 ```
-
-# See also
-
-[`fourier_lucky_image!`](@ref)
 """
-function fourier_lucky_image(cube::AbstractArray{T,3}; dims, kwargs...) where T
-    pixshape = nottuple(size(cube), dims)
-    storage = similar(cube, pixshape)
-    return fourier_lucky_image!(storage, cube; dims, kwargs...)
-end
-
-"""
-    fourier_lucky_image!(out::AbstractMatrix, cube; dims, q, kwargs...)
-
-Perform Fourier lucky imaging and store the combined frame in `out`. See [`fourier_lucky_image`](@ref) for a full descripton.
-"""
-function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3}; dims, q, register=:dft, maxfreq=1, kwargs...) where T
+function fourier_lucky_image(cube::AbstractArray{T,3}; dims, q, register=:dft, maxfreq=1, kwargs...) where T
     # register cube
     if register === :dft
         # to help coregistration, choose refidx from frame with highest flux
         refidx = @compat findmax(maximum, eachslice(cube; dims))[2]
-        reffreq = fft(selectdim(cube, dims, refidx))
+        refframe = selectdim(cube, dims, refidx)
+        # get shift to center refframe
+        refshift = argmax(refframe).I .- center(refframe)
+        reffreq = fft(refframe)
+        # go ahead and shift it now
+        fourier_shift!(reffreq, refshift)
         # don't actually register yet, do this during loop
         registered = cube
     else
@@ -76,21 +66,21 @@ function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3};
     first_frame = selectdim(registered, dims, firstindex(registered, dims))
     plan = plan_fft(first_frame)
     # set up work arrays to avoid allocating inside loop
-    mean_freq = zeros(Complex{T}, size(storage))
-    tmp_mod = similar(storage)
+    mean_freq = zeros(Complex{T}, size(first_frame))
+    tmp_mod = similar(first_frame)
     norm_value = size(cube, dims)
     # figure out frequency mask ahead of time
 
     freqs = fftfreq.(size(mean_freq))
     _maxfreq = norm(maxfreq .* maximum.(freqs))
-    mask = hypot.(freqs[1], freqs[2]')  .> _maxfreq
+    mask = @. hypot(freqs[1], freqs[2]')  > _maxfreq
 
     @inbounds for didx in axes(registered, dims)
         frame = selectdim(registered, dims, didx)
         frame_freq = plan * frame
         # if we are doing DFT registration we can just do that during this step to
         # save of time spent doing FFTs
-        if register === :dft
+        if register === :dft && didx != refidx
             result = phase_offset(plan, reffreq, frame_freq; kwargs...)
             fourier_shift!(frame_freq, result.shift, result.phasediff)
         end
@@ -105,6 +95,5 @@ function fourier_lucky_image!(storage::AbstractMatrix, cube::AbstractArray{T,3};
         @. mean_freq[tmp_mod ≥ cutoff] += frame_freq[tmp_mod ≥ cutoff] / norm_value
     end
     # ifft
-    storage .= real.(plan \ mean_freq)
-    return storage
+    return real(plan \ mean_freq)
 end

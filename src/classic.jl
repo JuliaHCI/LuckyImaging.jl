@@ -73,6 +73,9 @@ function classic_lucky_image!(
     cutoff = quantile(_metric, q)
     if register === :dft
         reference = selectdim(_cube, dims, argmax(_metric))
+        # center reference with peak
+        maxidx = argmax(reference)
+        refshift = maxidx.I .- center(reference)
     end
 
     # make sure array is zerod out
@@ -88,6 +91,7 @@ function classic_lucky_image!(
         # get index using registration method
         if register === :dft
             shift = phase_offset(reference, frame; kwargs...).shift
+            shift = shift .+ refshift
         elseif register === :peak
             # measure shift relative to subframe
             index = argmax(frame; kwargs...).I
