@@ -1,8 +1,0 @@
-[test_cube]
-git-tree-sha1 = "5586b38667dc56c6428a44d51fc7388a116a4b54"
-lazy = true
-
-    [[test_cube.download]]
-    # url = "https://github.com/JuliaHCI/LuckyImaging.jl/raw/main/artifacts/test_cube.tar.gz"
-    url = "https://rawcdn.githack.com/JuliaHCI/LuckyImaging.jl/main/artifacts/test_cube.tar.gz"
-    sha256 = "55d6cc17d43ee78e999ba4f6ce0a296ce8410efcc13bd4ebaacdbf6e50b54ff5"
