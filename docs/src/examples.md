@@ -32,8 +32,8 @@ function imshow(arr; kwargs...)
         xlims=extrema(xaxis), ylims=extrema(yaxis),
         aspect_ratio=1, c=:magma, size=(450, 400),
         cbar=true, kwargs...)
-    # add black "+" on center of frame (on grid)
-    scatter!([128], [128], c=:black, marker=:+, lab="")
+    # add black "+" on center of frame (on cell)
+    scatter!([128.5], [128.5], c=:black, marker=:+, lab="")
 end
 nothing # hide
 ```
@@ -90,6 +90,8 @@ using SubpixelRegistration
 
 # shift reference to center
 refshift = argmax(cube[:, :, refidx]).I .- (128.5, 128.5)
+```
+```@example vampires
 cube[:, :, refidx] .= fourier_shift(cube[:, :, refidx], refshift)
 registered = coregister(cube; dims=3, refidx, upsample_factor=10)
 

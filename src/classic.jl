@@ -95,10 +95,10 @@ function classic_lucky_image!(
         elseif register === :peak
             # measure shift relative to subframe
             index = argmax(frame; kwargs...).I
-            shift = center(frame) .- index
+            shift = index .- center(frame)
         elseif register === :com
             index = center_of_mass(frame; kwargs...)
-            shift = center(frame) .- index
+            shift = index .- center(frame)
         end
         # apply shift to full frame
         full_frame = selectdim(cube, dims, didx)

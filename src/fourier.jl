@@ -56,7 +56,7 @@ function fourier_lucky_image(cube::AbstractArray{T,3}; dims, q, register=:dft, m
             elseif register === :com
                 index = center_of_mass(frame)
             end
-            shift = center(frame) .- index
+            shift = index .- center(frame)
             # update frame in-place (it is a view)
             frame .= fourier_shift(frame, shift)
         end
