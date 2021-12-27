@@ -1,7 +1,7 @@
 module LuckyImaging
 
 using Compat
-using LazyArtifacts
+using DataDeps
 using Statistics
 using SubpixelRegistration
 
@@ -9,7 +9,6 @@ export lucky_image,
        classic_lucky_image,
        classic_lucky_image!,
        fourier_lucky_image,
-       fourier_lucky_image!,
        testcube
 
 include("util.jl")
@@ -59,6 +58,11 @@ julia> using FITSIO
 julia> cube = read(FITS(testcube())[1])
 ```
 """
-testcube() = joinpath(artifact"test_cube", "test_cube.fits")
+testcube() = joinpath(DataDeps.datadep"VAMPIRES_data_cube", "VAMPIRES_cube.fits")
+
+
+function __init__()
+    DataDeps.register(testcube_datadep)
+end
 
 end
