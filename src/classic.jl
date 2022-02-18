@@ -74,8 +74,8 @@ function classic_lucky_image!(
     if register === :dft
         reference = selectdim(_cube, dims, argmax(_metric))
         # center reference with peak
-        maxidx = argmax(reference)
-        refshift = maxidx.I .- center(reference)
+        index = center_of_mass(reference)
+        refshift = index .- center(reference)
     end
 
     # make sure array is zerod out
