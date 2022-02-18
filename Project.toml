@@ -4,21 +4,13 @@ authors = ["Miles Lucas <mdlucas@hawaii.edu> and contributors"]
 version = "0.1.0"
 
 [deps]
-AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
-Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DataDeps = "124859b0-ceae-595e-8997-d05f6a7a8dfe"
-FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 SubpixelRegistration = "97a7e826-69e2-510e-8af8-254736c4b599"
 
 [compat]
-AbstractFFTs = "1"
-Compat = "3.31.1"
 DataDeps = "0.7"
-FFTW = "1.4"
-LoopVectorization = "0.12"
-SubpixelRegistration = "0.2"
+SubpixelRegistration = "0.3"
 julia = "1.6"
