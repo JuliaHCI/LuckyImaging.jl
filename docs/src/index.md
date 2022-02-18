@@ -32,14 +32,12 @@ then, load a data cube
 cube = # ...
 ```
 
-we can use [`lucky_image`](@ref) as an entry point to both classic and Fourier lucky imaging methods
+then, we can use [`lucky_image`](@ref) for contracting the data (see the docstring for a full description of the options).
 
 ```julia
 image = lucky_image(cube; dims=3, q=0.9, alg=:classic, register=:peak)
 imagef = lucky_image(cube; dims=3, q=0.5, alg=:fourier, upsample_factor=10)
 ```
-
-see the docstrings for [`classic_lucky_image`](@ref) and [`fourier_lucky_image`](@ref) for more information on the algorithms and their options.
 
 ## Contributing and Support
 

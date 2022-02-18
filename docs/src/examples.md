@@ -8,7 +8,7 @@ To run these examples, you will need to install the following packages
 
 ```julia
 using Pkg
-Pkg.add(["FITSIO", "LuckyImaging", "Plots", "SubpixelRegistration"])
+Pkg.add(["FITSIO", "HCIToolbox", "LuckyImaging", "Plots", "SubpixelRegistration"])
 ```
 
 ---
@@ -28,7 +28,7 @@ function imshow(arr; kwargs...)
     xaxis = axes(arr, 1)[ranges[1]]
     yaxis = axes(arr, 2)[ranges[2]]
     # plot
-    heatmap(xaxis, yaxis, varr;
+    heatmap(xaxis, yaxis, transpose(varr);
         xlims=extrema(xaxis), ylims=extrema(yaxis),
         aspect_ratio=1, c=:magma, size=(450, 400),
         cbar=true, kwargs...)
@@ -41,7 +41,7 @@ nothing # hide
 let's look at the first few frames from the cube
 
 ```@example vampires
-# load data using DataDeps.jl (you may be prompted)
+# You may be prompted (download is ~100 MB)
 filename = testcube()
 cube = read(FITS(filename)[1])
 imshow(cube[:, :, 1], title="frame 1")
@@ -68,7 +68,7 @@ long_expo = mean(cube, dims=3)[:, :, 1]
 imshow(long_expo, title="long exposure")
 ```
 
-## Shit-and-add
+## Shift-and-add
 
 The simplest way to improve our image is to co-align the frames and add them together. This is also called "shift-and-add". To do the registration, we will use [SubpixelRegistration.jl](https://github.com/JuliaHCI/SubpixelRegistration.jl) for efficient FFT-based registration. To improve performance, we should choose a reference frame that is peak quality as possible. We can use the peak flux in each frame as a quality metric to aid our selection.
 
@@ -86,13 +86,18 @@ imshow(cube[:, :, worstidx], title="frame $worstidx")
 ```
 
 ```@example vampires
+using HCIToolbox
 using SubpixelRegistration
 
 # shift reference to center
-refshift = argmax(cube[:, :, refidx]).I .- (128.5, 128.5)
+ctr = (128.5, 128.5)
+refshift = ctr .- argmax(cube[:, :, refidx]).I
 ```
+
 ```@example vampires
-cube[:, :, refidx] .= fourier_shift(cube[:, :, refidx], refshift)
+# shift entire cube according to refshift
+shift_frame!(cube, refshift)
+# coregister cube now that reference frame is centered
 registered = coregister(cube; dims=3, refidx, upsample_factor=10)
 
 shift_added = mean(registered, dims=3)[:, :, 1]
@@ -103,66 +108,30 @@ imshow(shift_added, title="shift and add")
 this entire process is equivalent to classic lucky imaging with a selection quantile of 0
 
 ```@example vampires
-lucky_classic_0 = lucky_image(cube; dims=3, q=0,
-    alg=:classic, upsample_factor=10)
+lucky_classic_0 = lucky_image(cube; dims=3, q=0, upsample_factor=10)
+# note we can use our already registered cube, too!
+lucky_classic_0 = lucky_image(registered; dims=3, q=0, register=nothing)
 
 imshow(lucky_classic_0, title="classic (0%)")
 ```
 
 ## Classic lucky imaging
 
-Classic lucky imaging uses some metric to select or discard entire frames from the cube. [`classic_lucky_image`](@ref) describes these metrics in more detail. We need to specify a selection quantile, in other words, one minus the selection fraction. The selected frames will be shift-and-added. By default, the frames will be coregistered using [SubpixelRegistration.jl](https://github.com/JuliaHCI/SubpixelRegistration.jl).
+Classic lucky imaging uses some metric to select or discard entire frames from the cube. [`lucky_image`](@ref) describes these metrics in more detail. We need to specify a selection quantile, in other words, one minus the selection fraction. The selected frames will be shift-and-added. By default, the frames will be coregistered using [SubpixelRegistration.jl](https://github.com/JuliaHCI/SubpixelRegistration.jl).
 
 ```@example vampires
-lucky_classic_50 = lucky_image(cube; dims=3, q=0.5,
-    alg=:classic, upsample_factor=10)
+lucky_classic_50 = lucky_image(registered; dims=3, q=0.5, register=nothing)
 imshow(lucky_classic_50, title="classic (50%)")
 ```
 
 ```@example vampires
-lucky_classic_90 = lucky_image(cube; dims=3, q=0.9,
-    alg=:classic, upsample_factor=10)
+lucky_classic_90 = lucky_image(registered; dims=3, q=0.9, register=nothing)
 imshow(lucky_classic_90, title="classic (90%)")
 ```
 
 ```@example vampires
-lucky_classic_99 = lucky_image(cube; dims=3, q=0.99,
-    alg=:classic, upsample_factor=10)
+lucky_classic_99 = lucky_image(registered; dims=3, q=0.99, register=nothing)
 imshow(lucky_classic_99, title="classic (99%)")
 ```
 
 We can see that the higher our selection quantile (i.e., a lower selection fraction), the better our angular resolution is. However, the lower total number of frames combined lowers the signal-to-noise ratio.
-
-## Fourier lucky imaging
-
-In order to improve on the classic lucky imaging technique, Garrel, Guyonn, and Baudoz (2012)[^1] proposed using Fourier amplitudes for selection and performing image synthesis. This technique uses multiple frequencies that maximize the *modulation transfer function (MTF)*, which in theory approaches the limit of the diffraction-limited *optical transfer function (OTF)*.
-
-```@example vampires
-lucky_fourier_50 = lucky_image(cube; dims=3, q=0.5,
-    alg=:fourier, maxfreq=0.75, upsample_factor=10)
-imshow(lucky_fourier_50, title="Fourier (50%)")
-```
-
-```@example vampires
-lucky_fourier_90 = lucky_image(cube; dims=3, q=0.9,
-    alg=:fourier, maxfreq=0.75, upsample_factor=10)
-imshow(lucky_fourier_90, title="Fourier (90%)")
-```
-
-```@example vampires
-lucky_fourier_99 = lucky_image(cube; dims=3, q=0.99,
-    alg=:fourier, maxfreq=0.75, upsample_factor=10)
-imshow(lucky_fourier_99, title="Fourier (99%)")
-```
-
-Let's directly compare the Fourier selection versus the classic selection process
-
-```@example vampires
-plot(
-    imshow(lucky_classic_90, title="classic (90%)"),
-    imshow(lucky_fourier_90, title="Fourier (90%)"),
-    cbar=false, clims=(1, 5), size=(600, 340)
-)
-```
-
-[^1]: Vincent Garrel et al 2012 ["A Highly Efficient Lucky Imaging Algorithm: Image Synthesis Based on Fourier Amplitude Selection"](https://iopscience.iop.org/article/10.1086/667399) PASP 124 861

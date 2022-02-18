@@ -7,8 +7,6 @@
 
 ```@docs
 lucky_image
-classic_lucky_image
-classic_lucky_image!
-fourier_lucky_image
+lucky_image!
 testcube
 ```
