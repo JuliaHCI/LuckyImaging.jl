@@ -11,7 +11,7 @@ The following metrics, set with the keyword argument `metric` are available
 * `:max` - the maximum value
 * `:mean` - the mean value
 * `:min` - the minimum value (useful for coronagraphic images)
-* other - pass a function with the signature `f(::AbstractMatrix)` which returns a single value
+* other - pass a function with the signature `f(::AbstractMatrix)` which returns a scalar value
 
 # Registration
 
@@ -20,6 +20,7 @@ The following options for registering the selected frames are available, set wit
 * `:dft` - use `SubpixelRegistration.jl` to register the frames using their phase offsets. The reference frame will be the one with the highest metric, and keyword arguments like `upsample_factor` can be passed directly.
 * `:max` - register to maximum value
 * `:com` - register to center of mass
+* `:invcom` - register to center of inverse mass (useful for coronagraphic images)
 * `nothing` - cube is already co-registered
 
 # Keyword arguments
@@ -55,41 +56,54 @@ Perform classic lucky imaging and store the combined frame in `out`. See [`lucky
 """
 function lucky_image!(
     storage::AbstractMatrix, cube::AbstractArray{T,3}; 
-    dims, q, window=nothing, metric=:max, register=:dft, kwargs...) where T
+    dims, q, center=center(cube), window=nothing, 
+    metric=:max, register=:dft, kwargs...) where T
     # first, get window view of cube if preferred
     if isnothing(window)
         _cube = cube
     else
-        _cube = window_view(cube, dims, window)
+        _cube = window_view(cube, dims, window, center)
     end
     # get metric measured in each frame
     frame_gen = eachslice(_cube; dims=dims)
     if metric === :max
-        _metric = map(maximum, frame_gen)
+        _metric = map(sum, frame_gen)
     elseif metric === :min
-        _metric = map(minimum, frame_gen)
+        _metric = map(sum, frame_gen)
     elseif metric === :mean
         _metric = map(mean, frame_gen)
     else
         _metric = map(metric, frame_gen)
     end
     # find cutoff based off quantile
-    cutoff = quantile(_metric, q)
+    if metric === :min
+        cutoff = quantile(_metric, 1 - q)
+        pred = ≤(cutoff)
+    else
+        cutoff = quantile(_metric, q)
+        pred = ≥(cutoff)
+    end
+
     if register === :dft
-        reference = selectdim(_cube, dims, argmax(_metric))
-        # center reference with max
-        index = center_of_mass(reference)
-        refshift = center(reference) .- index
+        # center reference with max/min
+        if metric === :min
+            reference = selectdim(_cube, dims, argmin(_metric))
+            index = center_of_inverse_mass(reference)
+        else
+            reference = selectdim(_cube, dims, argmax(_metric))
+            index = argmax(reference).I
+        end
+        refshift = LuckyImaging.center(reference) .- index
     end
 
     # make sure array is zerod out
     fill!(storage, zero(T))
-    norm_value = count(>(cutoff), _metric)
+    norm_value = count(pred, _metric)
     # now, time to go through cube with frames above the cutoff
     # and combine them into the final frame. 
     @inbounds for didx in axes(_cube, dims)
         # skip frames below cutoff
-        _metric[didx] < cutoff && continue
+        pred(_metric[didx]) || continue
         # get frame
         frame = selectdim(_cube, dims, didx)
         # get index using registration method
@@ -100,10 +114,10 @@ function lucky_image!(
             elseif register === :max
                 # measure shift relative to subframe
                 index = argmax(frame; kwargs...).I
-                shift = center(frame) .- index
+                shift = LuckyImaging.center(frame) .- index
             elseif register === :com
                 index = center_of_mass(frame; kwargs...)
-                shift = center(frame) .- index
+                shift = LuckyImaging.center(frame) .- index
             end
             # apply shift to full frame
             full_frame = selectdim(cube, dims, didx)
