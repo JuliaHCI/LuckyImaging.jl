@@ -56,27 +56,30 @@ Perform classic lucky imaging and store the combined frame in `out`. See [`lucky
 """
 function lucky_image!(
     storage::AbstractMatrix, cube::AbstractArray{T,3}; 
-    dims, q, center=center(cube), window=nothing, 
-    metric=:max, register=:dft, kwargs...) where T
+    dims, q, minimize=false, center=center(cube), window=nothing, 
+    metric=:l2norm, register=:dft, shift_reference=true, kwargs...) where T
     # first, get window view of cube if preferred
     if isnothing(window)
         _cube = cube
+        offset = (0.0, 0.0)
     else
         _cube = window_view(cube, dims, window, center)
+        # get shift frame (possible) window to original frame center
+        offset = LuckyImaging.center(cube)[1:2] .- center[1:2]
     end
     # get metric measured in each frame
     frame_gen = eachslice(_cube; dims=dims)
     if metric === :max
-        _metric = map(sum, frame_gen)
-    elseif metric === :min
-        _metric = map(sum, frame_gen)
-    elseif metric === :mean
+        _metric = map(maximum, frame_gen)
+    elseif metric === :l2norm
+        _metric = map(X -> mean(v -> v^2, X), frame_gen)
+    elseif metric === :l1norm
         _metric = map(mean, frame_gen)
     else
         _metric = map(metric, frame_gen)
     end
     # find cutoff based off quantile
-    if metric === :min
+    if minimize
         cutoff = quantile(_metric, 1 - q)
         pred = ≤(cutoff)
     else
@@ -86,14 +89,15 @@ function lucky_image!(
 
     if register === :dft
         # center reference with max/min
-        if metric === :min
+        if minimize
             reference = selectdim(_cube, dims, argmin(_metric))
-            index = center_of_inverse_mass(reference)
+            index = argmin(reference).I
         else
             reference = selectdim(_cube, dims, argmax(_metric))
             index = argmax(reference).I
         end
-        refshift = LuckyImaging.center(reference) .- index
+        delta = LuckyImaging.center(reference) .- index .+ offset
+        refshift = shift_reference ? delta : zero.(delta)
     end
 
     # make sure array is zerod out
@@ -114,16 +118,16 @@ function lucky_image!(
             elseif register === :max
                 # measure shift relative to subframe
                 index = argmax(frame; kwargs...).I
-                shift = LuckyImaging.center(frame) .- index
+                shift = LuckyImaging.center(frame) .- index .+ offset
             elseif register === :com
                 index = center_of_mass(frame; kwargs...)
-                shift = LuckyImaging.center(frame) .- index
+                shift = LuckyImaging.center(frame) .- index .+ offset
             end
             # apply shift to full frame
             full_frame = selectdim(cube, dims, didx)
             registered_frame = fourier_shift(full_frame, shift)
         else
-            registered_frame = frame
+            registered_frame = selectdim(cube, dims, didx)
         end
         @. storage += registered_frame / norm_value
     end
